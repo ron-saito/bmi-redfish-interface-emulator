@@ -37,11 +37,9 @@ Dynamic resources:
     GET/POST /redfish/v1/Systems/{sys_id}/Actions/ComputerSystem.Reset
 """
 
-import g
-
 import sys, traceback
 import logging
-import copy
+import json_merge_patch
 from flask import Flask, request, make_response, render_template
 from flask_restful import reqparse, Api, Resource
 
@@ -170,10 +168,12 @@ class ComputerSystemAPI(Resource):
     # HTTP PATCH
     def patch(self, ident):
         logging.info('ComputerSystemAPI PATCH called')
+        raw_dict = request.get_json(force=True)
         try:
             resp = error_404_response(request.path)
             if ident in members:
-                resp = error_not_allowed_response(members[ident]['@odata.id'], request.method, {'Allow': self.allow})
+                members[ident] = json_merge_patch.merge(members[ident], raw_dict)
+                resp = members[ident], 200
         except Exception:
             traceback.print_exc()
             resp = simple_error_response('Server encountered an unexpected Error', 500)

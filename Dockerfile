@@ -28,7 +28,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-FROM artifactory.algol60.net/docker.io/library/alpine:3.21 AS base
+FROM alpine:3.21 AS base
 
 COPY src/requirements.txt /app/requirements.txt
 
@@ -74,7 +74,7 @@ COPY mockups /app/api_emulator/redfish/static
 EXPOSE 5000
 ENV MOCKUPFOLDER="public-rackmount1"
 ENV AUTH_CONFIG=""
-ENV PORT=5000
+ENV PORT=443
 ENV XNAME="x3000c0s0b0"
 ENV MAC_SCHEMA=""
 WORKDIR /app

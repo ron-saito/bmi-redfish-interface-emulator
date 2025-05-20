@@ -38,7 +38,8 @@ import random
 
 # Resource and SubResource imports
 from .redfish.computer_system_api import ComputerSystemAPI, CreateComputerSystem, ResetAction_API
-from .redfish.chassis_api import ChassisAPI, CreateChassis, ChassisResetActionAPI
+from .redfish.chassis_api import (ChassisAPI, InitChassis, ChassisResetActionAPI, InitChassisDrive,
+                                  DriveSecureEraseActionAPI, ChassisDriveAPI)
 from .redfish.manager_api import ManagerAPI, CreateManager, ManagerResetActionAPI
 from .redfish.update_service_api import UpdateServiceAPI, CreateFirmwareTarget, SimpleUpdateAPI, UpdateServiceConfigAPI
 from .redfish.templates.subscriptions import get_subscription_instance
@@ -47,6 +48,9 @@ from .redfish.event_service_api import CreateEventService
 from .redfish.account_service_api import CreateAccountService, CreateAccount, AccountCollectionAPI, AccountAPI
 from .redfish.session_service_api import CreateSessionService, SessionCollectionAPI, SessionAPI
 from .redfish.manager_network_protocol_api import ManagerNetworkProtocolAPI, CreateNetworkProtocol
+from .redfish.manager_vmedia_api import (VirtualMediaAPI, VirtualMediaEjectAPI, VirtualMediaInsertAPI,
+                                         CreateVirtualMedia)
+from .redfish.system_storage_api import (StorageVolumeCollectionAPI, InitVolumes, StorageVolumeAPI)
 
 import api_emulator.redfish.power_control_api as generic_power
 import api_emulator.redfish.hpe_cray_ex_power_control_api as hpe_cray_ex_power
@@ -103,6 +107,10 @@ import api_emulator.redfish.templates.intel_events as intel_events
 #     POST /redfish/v1/CertificateService/Actions/CertificateService.ReplaceCertificate
 # - Manager Network Protocol
 #     GET/PATCH /redfish/v1/Managers/{manager_id}/NetworkProtocol
+# - Manager Virtual Media
+#     GET /redfish/v1/Managers/{manager_id}/VirtualMedia
+#     POST /redfish/v1/Managers/{manager_id}/VirtualMedia/{vmedia_id}/Actions/VirtualMedia.InsertMedia
+#     POST /redfish/v1/Managers/{manager_id}/VirtualMedia/{vmedia_id}/Actions/VirtualMedia.EjectMedia
 class Loader:
 
     def __init__(self, resource_dictionary, config_data, bmcType='Generic'):
@@ -126,8 +134,8 @@ class Loader:
 
         # Add dynamic resources here. This will override any previously loaded static URL
         self.init_power_limit()
-        self.init_system_reset()
-        self.init_chassis_reset()
+        self.init_system()
+        self.init_chassis()
         self.init_manager_reset()
         self.init_update_service()
         self.init_event_service()
@@ -135,6 +143,9 @@ class Loader:
         self.init_session_service()
         self.init_cert_service()
         self.init_manager_network_protocol()
+        self.init_manager_virtual_media()
+        self.init_system_storage()
+        self.init_chassis_drive()
 
     def init_power_limit(self):
         try:
@@ -185,7 +196,7 @@ class Loader:
             g.api.add_resource(ilo_power.AccPowerServiceAPI, '/redfish/v1/Chassis/<string:ch_id>/Power/AccPowerService/PowerLimit')
             g.api.add_resource(ilo_power.ActionAPI, '/redfish/v1/Chassis/<string:ch_id>/Power/AccPowerService/PowerLimit/Actions/HpeServerAccPowerLimit.ConfigurePowerLimit')
 
-    def init_system_reset(self):
+    def init_system(self):
         try:
             systems = self.resource_dictionary.get_resource('Systems')
             if len(systems['Members']) == 0:
@@ -196,8 +207,10 @@ class Loader:
         #
         # System Reset Actions
         #
-        found = False
+        found_system = False
+        found_reset = False
         for system in systems['Members']:
+            found_system = True
             sys_id = system['@odata.id'].replace('/redfish/v1/Systems/', '')
             config = self.resource_dictionary.get_resource('Systems/' + sys_id)
             if 'Actions' in config and '#ComputerSystem.Reset' in config['Actions']:
@@ -211,11 +224,13 @@ class Loader:
                     except:
                         logging.info('Using default reset actions for Systems/%s' % sys_id)
                 CreateComputerSystem(sys_id, config, rst_actions)
-                found = True
-        if found:
+                found_reset = True
+        if found_system:
+            g.api.add_resource(ComputerSystemAPI, '/redfish/v1/Systems/<string:ident>')
+        if found_reset:
             g.api.add_resource(ResetAction_API, '/redfish/v1/Systems/<string:ident>/Actions/ComputerSystem.Reset')
 
-    def init_chassis_reset(self):
+    def init_chassis(self):
         try:
             collection = self.resource_dictionary.get_resource('Chassis')
             if len(collection['Members']) == 0:
@@ -226,8 +241,10 @@ class Loader:
         #
         # Chassis Reset Actions
         #
-        found = False
+        found_chassis = False
+        found_reset = False
         for member in collection['Members']:
+            found_chassis = True
             id = member['@odata.id'].replace('/redfish/v1/Chassis/', '')
             config = self.resource_dictionary.get_resource('Chassis/' + id)
             if 'Actions' in config and '#Chassis.Reset' in config['Actions']:
@@ -240,9 +257,11 @@ class Loader:
                         rst_actions = actionInfo['Parameters'][0]['AllowableValues']
                     except:
                         logging.info('Using default reset actions for Chassis/%s' % id)
-                CreateChassis(id, config, rst_actions)
-                found = True
-        if found:
+                InitChassis(id, config, rst_actions)
+                found_reset = True
+        if found_chassis:
+            g.api.add_resource(ChassisAPI, '/redfish/v1/Chassis/<string:chassis_id>')
+        if found_reset:
             g.api.add_resource(ChassisResetActionAPI, '/redfish/v1/Chassis/<string:ident>/Actions/Chassis.Reset')
 
     def init_manager_reset(self):
@@ -409,6 +428,88 @@ class Loader:
             return
         if found_network_protocol:
             g.api.add_resource(ManagerNetworkProtocolAPI, '/redfish/v1/Managers/<string:m_id>/NetworkProtocol')
+
+    def init_manager_virtual_media(self):
+        try:
+            managers = self.resource_dictionary.get_resource('Managers')
+            if len(managers['Members']) == 0:
+                # Found managers collection with no members. Don't create a dynamic resource.
+                return
+        except:
+            return
+
+        try:
+            for member in managers['Members']:
+                manager_id = member['@odata.id'].replace('/redfish/v1/Managers/', '')
+                manager = self.resource_dictionary.get_resource('Managers/%s' % manager_id)
+                if 'VirtualMedia' in manager:
+                    vmedia = self.resource_dictionary.get_resource('Managers/%s/VirtualMedia' % manager_id)
+                    for vmedia_member in vmedia['Members']:
+                        vmedia_id = vmedia_member['@odata.id'].replace('/redfish/v1/Managers/%s/VirtualMedia/' % manager_id, '')
+                        vmedia_inst = self.resource_dictionary.get_resource('Managers/%s/VirtualMedia/%s' % (manager_id, vmedia_id))
+                        CreateVirtualMedia(vmedia_id, vmedia_inst)
+                        g.api.add_resource(VirtualMediaAPI, '/redfish/v1/Managers/'+manager_id+'/VirtualMedia/<string:vmedia_id>')
+                        g.api.add_resource(VirtualMediaEjectAPI, '/redfish/v1/Managers/'+manager_id+'/VirtualMedia/<string:vmedia_id>/Actions/VirtualMedia.EjectMedia')
+                        g.api.add_resource(VirtualMediaInsertAPI, '/redfish/v1/Managers/'+manager_id+'/VirtualMedia/<string:vmedia_id>/Actions/VirtualMedia.InsertMedia')
+        except:
+           return
+
+    def init_system_storage(self):
+        try:
+            systems = self.resource_dictionary.get_resource('Systems')
+            if len(systems['Members']) == 0:
+                # Found systems collection with no members. Don't create a dynamic resource.
+                return
+        except:
+            return
+
+        found_system_storage = False
+        try:
+            for sys_member in systems['Members']:
+                sys_id = sys_member['@odata.id'].replace('/redfish/v1/Systems/', '')
+                storage = self.resource_dictionary.get_resource('Systems/' + sys_id + '/Storage')
+                if len(storage['Members']) == 0:
+                    continue
+
+                for storage_member in storage['Members']:
+                    found_system_storage = True
+                    storage_id = storage_member['@odata.id'].replace('/redfish/v1/Systems/%s/Storage/' % sys_id, '')
+                    volumes = self.resource_dictionary.get_resource('Systems/%s/Storage/%s/Volumes' % (sys_id, storage_id))
+                    InitVolumes(storage_id, volumes)
+        except:
+            return
+
+        if found_system_storage:
+            g.api.add_resource(StorageVolumeCollectionAPI, '/redfish/v1/Systems/1/Storage/<string:storage_id>/Volumes')
+            g.api.add_resource(StorageVolumeAPI, '/redfish/v1/Systems/1/Storage/<string:storage_id>/Volumes/<string:volume_id>')
+
+    def init_chassis_drive(self):
+        try:
+            collection = self.resource_dictionary.get_resource('Chassis')
+            if len(collection['Members']) == 0:
+                # Found chassis collection with no members. Don't create a dynamic resource.
+                return
+        except:
+            return
+        #
+        # Chassis Drive Actions
+        #
+        found = False
+        for member in collection['Members']:
+            chassis_id = member['@odata.id'].replace('/redfish/v1/Chassis/', '')
+            chassis = self.resource_dictionary.get_resource('Chassis/' + chassis_id)
+            if chassis['ChassisType'] == 'StorageEnclosure':
+                drives = self.resource_dictionary.get_resource('Chassis/%s/Drives' % chassis_id)
+                for drive_member in drives['Members']:
+                    found = True
+                    drive_id = drive_member['@odata.id'].replace('/redfish/v1/Chassis/%s/Drives/' % chassis_id, '')
+                    drive = self.resource_dictionary.get_resource('Chassis/%s/Drives/%s' % (chassis_id, drive_id))
+                    # Create the Drive resource
+                    InitChassisDrive(chassis_id, drive_id, drive)
+
+        if found:
+            g.api.add_resource(ChassisDriveAPI, '/redfish/v1/Chassis/<string:chassis_id>/Drives/<string:drive_id>')
+            g.api.add_resource(DriveSecureEraseActionAPI, '/redfish/v1/Chassis/<string:chassis_id>/Drives/<string:drive_id>/Actions/Drive.SecureErase')
 
     # Get the BMC type
     def get_type(self):

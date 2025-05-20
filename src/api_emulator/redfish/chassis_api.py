@@ -35,10 +35,15 @@ Dynamic resources:
  - Chassis Reset Actions
     GET      /redfish/v1/Chassis/{chassis_id}
     GET/POST /redfish/v1/Chassis/{chassis_id}/Actions/Chassis.Reset
+
+ - Chassis Drive Secure Erase
+    #     GET /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}
+    #     POST /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}/Actions/Drive.SecureErase
 """
 
 import g
 
+import time
 import sys, traceback
 import logging
 import copy
@@ -57,49 +62,56 @@ members = {}
 members_actions = {}
 members_reset_thread = {}
 
+members_drives = {} # [<chassis_id>_<drive_id>] -> drive
+members_se_thread = {} # [<chassis_id>_<drive_id>] -> secure erase thread
+
+
 reboot_actions = ['GracefulRestart', 'ForceRestart', 'PushPowerButton']
 off_actions = ['Off', 'ForceOff', 'GracefulShutdown', 'Nmi']
 on_actions = ['On', 'ForceOn']
 
 default_actions = ['ForceOff', 'On', 'Off']
 
+def getChassisMemberDrives():
+    return members_drives
+
 # ResetWorker
 #
 # Worker thread for performing emulated asynchronous chassis power resets.
 #
 class ResetWorker(Thread):
-    def __init__(self, sys_id):
+    def __init__(self, chassis_id):
         super(ResetWorker, self).__init__()
-        self.sys_id = sys_id
+        self.chassis_id = chassis_id
 
     def run(self):
-        members[self.sys_id]['PowerState'] = 'Off'
-        members[self.sys_id]['Status']['State'] = 'Disabled'
-        send_power_event(self.sys_id, 'Off')
+        members[self.chassis_id]['PowerState'] = 'Off'
+        members[self.chassis_id]['Status']['State'] = 'Disabled'
+        send_power_event(self.chassis_id, 'Off')
         sleep(5)
-        members[self.sys_id]['PowerState'] = 'PoweringOn'
-        members[self.sys_id]['Status']['State'] = 'Starting'
-        send_power_event(self.sys_id, 'On')
+        members[self.chassis_id]['PowerState'] = 'PoweringOn'
+        members[self.chassis_id]['Status']['State'] = 'Starting'
+        send_power_event(self.chassis_id, 'On')
         sleep(5)
-        members[self.sys_id]['PowerState'] = 'On'
-        members[self.sys_id]['Status']['State'] = 'Enabled'
+        members[self.chassis_id]['PowerState'] = 'On'
+        members[self.chassis_id]['Status']['State'] = 'Enabled'
 
 # PowerOnWorker
 #
 # Worker thread for performing emulated asynchronous chassis power on actions.
 #
 class PowerOnWorker(Thread):
-    def __init__(self, sys_id):
+    def __init__(self, chassis_id):
         super(PowerOnWorker, self).__init__()
-        self.sys_id = sys_id
+        self.chassis_id = chassis_id
 
     def run(self):
-        members[self.sys_id]['PowerState'] = 'PoweringOn'
-        members[self.sys_id]['Status']['State'] = 'Starting'
-        send_power_event(self.sys_id, 'On')
+        members[self.chassis_id]['PowerState'] = 'PoweringOn'
+        members[self.chassis_id]['Status']['State'] = 'Starting'
+        send_power_event(self.chassis_id, 'On')
         sleep(5)
-        members[self.sys_id]['PowerState'] = 'On'
-        members[self.sys_id]['Status']['State'] = 'Enabled'
+        members[self.chassis_id]['PowerState'] = 'On'
+        members[self.chassis_id]['Status']['State'] = 'Enabled'
 
 def send_power_event(id, power_state):
     ooc = members[id]['@odata.id']
@@ -186,12 +198,11 @@ class ChassisAPI(Resource):
             resp = simple_error_response('Server encountered an unexpected Error', 500)
         return resp
 
-# CreateChassis
 #
 # Called internally to create instances of a Chassis. These
 # resources are affected by ChassisResetActionAPI()
 #
-def CreateChassis(ident, config, rst_actions):
+def InitChassis(ident, config, rst_actions):
     logging.info('CreateChassis called')
     try:
         logging.debug('added config for Chassis/%s' % ident)
@@ -317,3 +328,127 @@ class ChassisResetActionAPI(Resource):
             traceback.print_exc()
             resp = simple_error_response('Server encountered an unexpected Error', 500)
         return resp
+
+# SecureEraseWorker
+#
+# Worker thread for performing emulated asynchronous secure erase operations.
+#
+class SecureEraseWorker(Thread):
+    def __init__(self, chassis_id, drive_id):
+        super(SecureEraseWorker, self).__init__()
+        self.chassis_id = chassis_id
+        self.drive_id = drive_id
+
+    def run(self):
+        ident = self.chassis_id + "_"  + self.drive_id
+        members_drives[ident]['Status']['State'] = 'INPROGRESS'
+        members_drives[ident]['Operations'] = [
+            {
+                'Name': 'Sanitize',
+                'PercentageComplete': 10,
+            }
+        ]
+        # Simulate a long-running secure erase operation
+        # In a real implementation, this would involve actual hardware operations.
+        time.sleep(5)  # Simulate a 5-second secure erase operation
+        members_drives[ident]['Status']['State'] = 'COMPLETE'
+        members_drives[ident]['Operations'] = [
+            {
+                'Name': 'Sanitize',
+                'PercentageComplete': 100,
+            }
+        ]
+
+class DriveSecureEraseActionAPI(Resource):
+    # Set authorization levels here. You can either list all of the
+    # privileges needed for access or just the highest one.
+    method_decorators = {'get':    [auth.auth_required(priv={Privilege.Login})],
+                         'post':   [auth.auth_required(priv={Privilege.ConfigureComponents})],
+                         'put':    [auth.auth_required(priv={Privilege.ConfigureComponents})],
+                         'patch':  [auth.auth_required(priv={Privilege.ConfigureComponents})],
+                         'delete': [auth.auth_required(priv={Privilege.ConfigureComponents})]}
+
+    def __init__(self, **kwargs):
+        logging.info('SecureEraseActionAPI init called')
+        self.allow = 'POST'
+        self.apiName = 'SecureEraseActionAPI'
+
+    # HTTP GET
+    def get(self, chassis_id, drive_id):
+        logging.info('%s %s called' % (self.apiName, request.method))
+        try:
+            # Find the entry with the correct value for Id
+            resp = error_404_response(request.path)
+            ident = chassis_id + "_" + drive_id
+            if ident in members_drives:
+                member = members_drives[ident]
+                resp = member, 200
+        except Exception:
+            traceback.print_exc()
+            resp = simple_error_response('Server encountered an unexpected Error', 500)
+        return resp
+
+    # HTTP POST
+    def post(self, chassis_id, drive_id):
+        logging.info('%s %s called' % (self.apiName, request.method))
+        try:
+            resp = error_404_response(request.path)
+            ident = chassis_id + "_" + drive_id
+            if ident in members_drives:
+                if members_se_thread[ident] is not None and members_se_thread[ident].is_alive():
+                    # Ignore other power actions if we have a pending thread.
+                    logging.info('Thread is running. Ignoring request')
+                else:
+                    # Create a new thread for the secure erase operation
+                    members_se_thread[ident] = SecureEraseWorker(chassis_id, drive_id)
+                    members_se_thread[ident].run()
+                    resp = success_response('Secure Erase operation started successfully', 200)
+            else:
+                resp = error_404_response(request.path)
+        except Exception:
+            traceback.print_exc()
+            resp = simple_error_response('Server encountered an unexpected Error', 500)
+        return resp
+
+class ChassisDriveAPI(Resource):
+    # Set authorization levels here. You can either list all of the
+    # privileges needed for access or just the highest one.
+    method_decorators = {'get':    [auth.auth_required(priv={Privilege.Login})],
+                         'post':   [auth.auth_required(priv={Privilege.ConfigureComponents})],
+                         'put':    [auth.auth_required(priv={Privilege.ConfigureComponents})],
+                         'patch':  [auth.auth_required(priv={Privilege.ConfigureComponents})],
+                         'delete': [auth.auth_required(priv={Privilege.ConfigureComponents})]}
+
+    def __init__(self, **kwargs):
+        logging.info('ChassisDriveAPI init called')
+        self.allow = 'GET'
+        self.apiName = 'ChassisDriveAPI'
+
+    # HTTP GET
+    def get(self, chassis_id, drive_id):
+        logging.info('%s %s called' % (self.apiName, request.method))
+        try:
+            resp = error_404_response(request.path)
+            ident = chassis_id + "_" + drive_id
+            if ident in members_drives:
+                member = members_drives[ident]
+                resp = member, 200
+        except Exception:
+            traceback.print_exc()
+            resp = simple_error_response('Server encountered an unexpected Error', 500)
+        return resp
+
+# InitChassisDrive
+# Called internally to init Chassis Drive.  These resources are affected by SecureEraseActionAPI()
+def InitChassisDrive(chassis_id, drive_id, drive):
+    logging.info('InitChassisDrive called')
+    try:
+        # Create a new Chassis Drive resource
+        ident = chassis_id + "_" + drive_id
+        members_drives[ident] = drive
+        members_se_thread[ident] = None  # Initialize the thread to None
+
+        return members_drives[ident], 200
+    except Exception:
+        traceback.print_exc()
+        return simple_error_response('Server encountered an unexpected Error', 500)
