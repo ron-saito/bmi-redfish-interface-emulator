@@ -1,6 +1,6 @@
 # CSM Redfish Interface Emulator
 
-The CSM Redfish Interface Emulator is based off DMTF's [Redfish Interface Emulator](https://github.com/DMTF/Redfish-Interface-Emulator) and can emulate a redfish interface with static and dynamic resources.
+The BM Redfish Interface Emulator is based off of Cray's Redfish Interface Emulator (https://github.com/Cray-HPE/csm-redfish-interface-emulator), which is base on DMTF's [Redfish Interface Emulator] (https://github.com/DMTF/Redfish-Interface-Emulator) and can emulate a redfish interface with static and dynamic resources.
 
 Although this project is based on DMTF's Redfish Interface Emulator project, it deviates a bit from DMTF's project's functionality. DMTF's project's dynamic resources are meant to be fully generated and generic. The CSM Redfish Interface Emulator project takes this an uses it to create dynamic resources that sit under a static mockup to emulate specific BMCs.
 
@@ -46,17 +46,37 @@ You can run a predefined emulator using ./Dockerfile and setting the MOCKUPFOLDE
 
 Build the docker image.
 ```
-docker build -t csm-rie:latest -f ./Dockerfile .
+docker build -t bm-sim:latest -f ./Dockerfile .
 ```
 
-Set a local port for your BMC
+Set a local port for your BMC. 
 ```
-BMC_PORT=5000
+BMC_PORT=5100
+```
+
+Set the mockup folder to the BMC type you want to emulate. The default is DL325.
+```
+export MOCKUPFOLDER=DL325
 ```
 
 Run the docker image.
 ```
-docker run -p ${BMC_PORT}:5000 -e MOCKUPFOLDER=<BMC_type> --rm csm-rie:latest
+docker run -p ${BMC_PORT}:443 -e MOCKUPFOLDER=<BMC_type> --rm bm-sim:latest
+```
+
+To multiple instances of the emulator:
+```
+docker-compose up --scale sim=<number of instances> -d 
+```
+
+To tail the logs:
+```
+docker-compose logs -f <container name>
+```
+
+To stop the emulators:
+```
+docker-compose down
 ```
 
 <a name="locally"></a>
@@ -69,7 +89,7 @@ This method runs setup.sh which will copy the resources into a new directory, cr
 
 Set a local port for your BMC
 ```
-BMC_PORT=5000
+BMC_PORT=5100
 ```
 
 Run the setup.sh script.
@@ -111,7 +131,7 @@ Access to the emulators URIs are privilege based and are set per HTTP method for
 
 Any account specified by AUTH_CONFIG will be also added under the AccountService in the emulated redfish server and, if using the dynamic resource, can be manipulated (Add/Delete/Patch) using the AccountService. Actions under the AccountService will affect the emulator's authorization accounts.
 
-Similarly session tokens can be created with SessionService actions if the emulator is using the dynamic resource. No sessions exist by default.
+Similarly, session tokens can be created with SessionService actions if the emulator is using the dynamic resource. No sessions exist by default.
 
 By default, if AUTH_CONFIG is empty or an invalid format, the emulator will have 3 accounts created:
 - root:root_password:Administrator
@@ -227,6 +247,22 @@ The Loader class currently sets up dynamic resources for:
     - Gigabyte
     - HPE Cray
     - Proliant iLO
+- Manager Virtual Media
+    - Generic
+        - GET /redfish/v1/Managers/{manager_id}/VirtualMedia
+        - POST /redfish/v1/Managers/{manager_id}/VirtualMedia/{vmedia_id}/Actions/VirtualMedia.InsertMedia
+        - POST /redfish/v1/Managers/{manager_id}/VirtualMedia/{vmedia_id}/Actions/VirtualMedia.EjectMedia
+- Chassis Drive Secure Erase
+    - Generic
+        - GET /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}
+        - POST /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}/Actions/Drive.SecureErase
+- System Volume API
+    - Generic
+        - GET /redfish/v1/Systems/{system_id}/Storage/{storage_id}
+        - GET /redfish/v1/Systems/{system_id}/Storage/{storage_id}/Volumes
+        - GET /redfish/v1/Systems/{system_id}/Storage/{storage_id}/Volumes/{volume_id}
+        - POST /redfish/v1/Systems/{system_id}/Storage/{storage_id}
+        - DELETE /redfish/v1/Systems/{system_id}/Storage/{storage_id}/Volumes
 
 The Loader class also tries to search the static mockup for serial numbers to randomize them with randomize(). MAC addresses are also modified either with a random MAC or using the Mountain scheme based on the given xname.
 

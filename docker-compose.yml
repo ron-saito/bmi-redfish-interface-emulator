@@ -1,0 +1,7 @@
+services:
+  sim:
+    image: csm-bm
+    environment:
+      - MOCKUPFOLDER=DL325
+    ports:
+        - "5100-5200:443"

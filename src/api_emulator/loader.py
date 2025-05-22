@@ -111,6 +111,15 @@ import api_emulator.redfish.templates.intel_events as intel_events
 #     GET /redfish/v1/Managers/{manager_id}/VirtualMedia
 #     POST /redfish/v1/Managers/{manager_id}/VirtualMedia/{vmedia_id}/Actions/VirtualMedia.InsertMedia
 #     POST /redfish/v1/Managers/{manager_id}/VirtualMedia/{vmedia_id}/Actions/VirtualMedia.EjectMedia
+# - Chassis Drive Secure Erase
+#     GET /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}
+#     POST /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}/Actions/Drive.SecureErase
+# - System Volume API
+#     GET /redfish/v1/Systems/{system_id}/Storage/{storage_id}
+#     GET /redfish/v1/Systems/{system_id}/Storage/{storage_id}/Volumes
+#     GET /redfish/v1/Systems/{system_id}/Storage/{storage_id}/Volumes/{volume_id}
+#     POST /redfish/v1/Systems/{system_id}/Storage/{storage_id}
+#     DELETE /redfish/v1/Systems/{system_id}/Storage/{storage_id}/Volumes
 class Loader:
 
     def __init__(self, resource_dictionary, config_data, bmcType='Generic'):

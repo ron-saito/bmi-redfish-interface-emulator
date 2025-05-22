@@ -94,7 +94,7 @@
         "TotalSystemMemoryGiB": 64,
         "TotalSystemPersistentMemoryGiB": 0
     },
-    "Model": "ProLiant DL325 Gen10 Plus",
+    "Model": "ProLiant DL325 Gen10 Plus - SIMULATED",
     "Name": "Computer System",
     "NetworkInterfaces": {
         "@odata.id": "/redfish/v1/Systems/1/NetworkInterfaces"

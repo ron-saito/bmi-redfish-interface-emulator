@@ -71,12 +71,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY src /app
 COPY mockups /app/api_emulator/redfish/static
 
-EXPOSE 5000
-ENV MOCKUPFOLDER="public-rackmount1"
-ENV AUTH_CONFIG=""
+EXPOSE 443
+ENV MOCKUPFOLDER="DL325"
 ENV PORT=443
-ENV XNAME="x3000c0s0b0"
-ENV MAC_SCHEMA=""
 WORKDIR /app
 ENTRYPOINT ["python3"]
 CMD ["emulator.py"]
