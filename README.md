@@ -1,6 +1,7 @@
-# CSM Redfish Interface Emulator
+# BMI Redfish Interface Emulator
 
-The BM Redfish Interface Emulator is based off of Cray's Redfish Interface Emulator (https://github.com/Cray-HPE/csm-redfish-interface-emulator), which is base on DMTF's [Redfish Interface Emulator] (https://github.com/DMTF/Redfish-Interface-Emulator) and can emulate a redfish interface with static and dynamic resources.
+The BMI Redfish Interface Emulator is based off of Cray's CSM Redfish Interface Emulator (https://github.
+com/Cray-HPE/csm-redfish-interface-emulator), which is base on DMTF's [Redfish Interface Emulator] (https://github.com/DMTF/Redfish-Interface-Emulator) and can emulate a redfish interface with static and dynamic resources.
 
 Although this project is based on DMTF's Redfish Interface Emulator project, it deviates a bit from DMTF's project's functionality. DMTF's project's dynamic resources are meant to be fully generated and generic. The CSM Redfish Interface Emulator project takes this an uses it to create dynamic resources that sit under a static mockup to emulate specific BMCs.
 
@@ -61,7 +62,7 @@ export MOCKUPFOLDER=DL325
 
 Run the docker image.
 ```
-docker run -p ${BMC_PORT}:443 -e MOCKUPFOLDER=<BMC_type> --rm bm-sim:latest
+docker run -p ${BMC_PORT}:443 -e MOCKUPFOLDER=<BMC_type> --rm bmi-simulator:latest
 ```
 
 To multiple instances of the emulator:

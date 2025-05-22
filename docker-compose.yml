@@ -1,6 +1,6 @@
 services:
   sim:
-    image: csm-bm
+    image: bmi-simulator:latest
     environment:
       - MOCKUPFOLDER=DL325
     ports:
