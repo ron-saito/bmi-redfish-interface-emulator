@@ -33,7 +33,7 @@
 """
 Dynamic resources:
  - System Power Actions
-    GET      /redfish/v1/Systems/{sys_id}
+    GET/PATCH /redfish/v1/Systems/{sys_id}
     GET/POST /redfish/v1/Systems/{sys_id}/Actions/ComputerSystem.Reset
 """
 
@@ -121,7 +121,7 @@ class ComputerSystemAPI(Resource):
 
     def __init__(self, **kwargs):
         logging.info('ComputerSystemAPI init called')
-        self.allow = 'GET'
+        self.allow = 'GET', 'PATCH'
         try:
             global wildcards
             wildcards = kwargs

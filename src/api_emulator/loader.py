@@ -81,7 +81,7 @@ import api_emulator.redfish.templates.intel_events as intel_events
 #     GET  /redfish/v1/Chassis/{sys_id}/Power/AccPowerService/PowerLimit - Apollo 6500 Power Limit Schema
 #     POST /redfish/v1/Chassis/{sys_id}/Power/AccPowerService/PowerLimit/Actions/HpeServerAccPowerLimit.ConfigurePowerLimit
 # - System Power Actions
-#     GET      /redfish/v1/Systems/{sys_id}
+#     GET /redfish/v1/Systems/{system_id}
 #     GET/POST /redfish/v1/Systems/{sys_id}/Actions/ComputerSystem.Reset
 # - Chassis Power Actions
 #     GET      /redfish/v1/Chassis/{chassis_id}
@@ -107,6 +107,10 @@ import api_emulator.redfish.templates.intel_events as intel_events
 #     POST /redfish/v1/CertificateService/Actions/CertificateService.ReplaceCertificate
 # - Manager Network Protocol
 #     GET/PATCH /redfish/v1/Managers/{manager_id}/NetworkProtocol
+#
+# ------ newly added in BMI Redfish Interface Emulator ------
+# - System Actions
+#     GET/PATCH /redfish/v1/Systems/{system_id}
 # - Manager Virtual Media
 #     GET /redfish/v1/Managers/{manager_id}/VirtualMedia
 #     POST /redfish/v1/Managers/{manager_id}/VirtualMedia/{vmedia_id}/Actions/VirtualMedia.InsertMedia

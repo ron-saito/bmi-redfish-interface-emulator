@@ -37,8 +37,8 @@ Dynamic resources:
     GET/POST /redfish/v1/Chassis/{chassis_id}/Actions/Chassis.Reset
 
  - Chassis Drive Secure Erase
-    #     GET /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}
-    #     POST /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}/Actions/Drive.SecureErase
+    GET /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}
+    POST /redfish/v1/Chassis/{chassis_id}/Drives/{drive_id}/Actions/Drive.SecureErase
 """
 
 import g
