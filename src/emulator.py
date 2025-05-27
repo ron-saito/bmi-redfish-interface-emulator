@@ -175,6 +175,7 @@ def main():
     global SPEC
 
     mockupfolder = os.getenv('MOCKUPFOLDER', 'public-rackmount1')
+    g.async_sleep = float(os.getenv('ASYNC_SLEEP', 5.0))
 
     HTTPS = os.getenv('HTTPS', 'Enable')
     assert HTTPS.lower() in ['enable', 'disable'], 'Unknown HTTPS setting:' + HTTPS

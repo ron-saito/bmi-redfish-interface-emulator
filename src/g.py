@@ -48,6 +48,8 @@ staticfolder = 'Generic'
 # Base URI. Will get overwritten in emulator.py
 rest_base = 'base'
 
+async_sleep = 5.0  # seconds
+
 # Create Flask server
 app = Flask(__name__)
 

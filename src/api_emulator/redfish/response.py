@@ -18,6 +18,25 @@ def simple_error_response(msg, status, jsonify=False):
         data = json.dumps(data, indent=4)
     return data, status
 
+def error_400_response(jsonify=False):
+    data = {
+        "error": {
+            "code": "iLO.0.10.ExtendedInfo",
+            "message": "See @Message.ExtendedInfo for more information.",
+            "@Message.ExtendedInfo": [
+                {
+                    "MessageArgs": [
+                        "5, (01,00,00)"
+                    ],
+                    "MessageId": "iLO.2.25.ResourceNotReadyRetry"
+                }
+            ]
+        }
+    }
+    if jsonify:
+        data = json.dumps(data, indent=4)
+    return data, 400
+
 def error_404_response(path, jsonify=False):
     data = {
         'error': {

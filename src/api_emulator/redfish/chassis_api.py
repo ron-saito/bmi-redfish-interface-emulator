@@ -75,6 +75,15 @@ default_actions = ['ForceOff', 'On', 'Off']
 def getChassisMemberDrives():
     return members_drives
 
+def isPowerOn(chassis_id):
+    """
+    Check if the chassis is powered on.
+    Returns True if PowerState is 'On', otherwise False.
+    """
+    if chassis_id in members:
+        return members[chassis_id]['PowerState'] == 'On'
+    return False
+
 # ResetWorker
 #
 # Worker thread for performing emulated asynchronous chassis power resets.
@@ -88,11 +97,11 @@ class ResetWorker(Thread):
         members[self.chassis_id]['PowerState'] = 'Off'
         members[self.chassis_id]['Status']['State'] = 'Disabled'
         send_power_event(self.chassis_id, 'Off')
-        sleep(5)
+        sleep(g.async_sleep)
         members[self.chassis_id]['PowerState'] = 'PoweringOn'
         members[self.chassis_id]['Status']['State'] = 'Starting'
         send_power_event(self.chassis_id, 'On')
-        sleep(5)
+        sleep(g.async_sleep)
         members[self.chassis_id]['PowerState'] = 'On'
         members[self.chassis_id]['Status']['State'] = 'Enabled'
 
@@ -109,7 +118,7 @@ class PowerOnWorker(Thread):
         members[self.chassis_id]['PowerState'] = 'PoweringOn'
         members[self.chassis_id]['Status']['State'] = 'Starting'
         send_power_event(self.chassis_id, 'On')
-        sleep(5)
+        sleep(g.async_sleep)
         members[self.chassis_id]['PowerState'] = 'On'
         members[self.chassis_id]['Status']['State'] = 'Enabled'
 
@@ -350,7 +359,7 @@ class SecureEraseWorker(Thread):
         ]
         # Simulate a long-running secure erase operation
         # In a real implementation, this would involve actual hardware operations.
-        time.sleep(5)  # Simulate a 5-second secure erase operation
+        time.sleep(g.async_sleep)  # Simulate a async secure erase operation
         members_drives[ident]['Status']['State'] = 'COMPLETE'
         members_drives[ident]['Operations'] = [
             {

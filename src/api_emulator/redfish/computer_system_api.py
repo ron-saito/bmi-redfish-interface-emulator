@@ -46,6 +46,7 @@ from flask_restful import reqparse, Api, Resource
 from threading import Thread
 from time import sleep
 
+import g
 from .redfish_auth import auth, Privilege
 from .event_generator import GenEvent, GenEventRecord
 from .event_service_api import send_event
@@ -61,6 +62,15 @@ on_actions = ['On', 'ForceOn']
 
 default_actions = ['ForceOff', 'On', 'Off']
 
+def isPowerOn(system_id):
+    """
+    Check if the system is powered on.
+    Returns True if PowerState is 'On', otherwise False.
+    """
+    if system_id in members:
+        return members[system_id]['PowerState'] == 'On'
+    return False
+
 # ResetWorker
 #
 # Worker thread for performing emulated asynchronous computer system power resets.
@@ -74,11 +84,11 @@ class ResetWorker(Thread):
         members[self.sys_id]['PowerState'] = 'Off'
         members[self.sys_id]['Status']['State'] = 'Disabled'
         send_power_event(self.sys_id, 'Off')
-        sleep(5)
+        sleep(g.async_sleep)
         members[self.sys_id]['PowerState'] = 'PoweringOn'
         members[self.sys_id]['Status']['State'] = 'Starting'
         send_power_event(self.sys_id, 'On')
-        sleep(5)
+        sleep(g.async_sleep)
         members[self.sys_id]['PowerState'] = 'On'
         members[self.sys_id]['Status']['State'] = 'Enabled'
 
@@ -95,7 +105,7 @@ class PowerOnWorker(Thread):
         members[self.sys_id]['PowerState'] = 'PoweringOn'
         members[self.sys_id]['Status']['State'] = 'Starting'
         send_power_event(self.sys_id, 'On')
-        sleep(5)
+        sleep(g.async_sleep)
         members[self.sys_id]['PowerState'] = 'On'
         members[self.sys_id]['Status']['State'] = 'Enabled'
 

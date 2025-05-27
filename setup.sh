@@ -35,6 +35,7 @@ WORK_DIR=../Emulator
 API_PORT=5000
 SETUP_ONLY=
 AUTH=
+ASYNC_SLEEP=5
 
 function print_help {
     cat <<EOF
@@ -44,7 +45,7 @@ necessary source files ready and start a local instance of the emulator.
 
 USAGE:
 
-    $(basename $0) [--port PORT] [--workspace DIR] [--no-start]
+    $(basename $0) [--port PORT] [--workspace DIR] [--no-start] [--auth AUTH_STR] [--mockup MOCKUP] [--async-sleep SLEEP]
 
 Options:
 
@@ -59,6 +60,9 @@ Options:
                             authorization for contacting the emulator.
                             (<username1>:<password1>:<role1>;<username2>:<password2>:<role2>...)
     -m | --mockup MOCKUP -- Specify the mockup type for this emulator.
+
+    -s | --async-sleep SLEEP -- Specify the sleep time in seconds for simulated async operations.
+                            Default is $ASYNC_SLEEP seconds.
 
 EOF
 }
@@ -84,6 +88,10 @@ while [ "$1" != "" ]; do
         -m | --mockup )
             shift
             MOCKUP=$1
+            ;;
+        -s | --async-sleep )
+            shift
+            ASYNC_SLEEP=$1
             ;;
         *)
             print_help
@@ -131,8 +139,8 @@ mkdir $WORK_DIR
 
 
 
-# Copy over CSM bits
-echo "Applying CSM additions..."
+# Copy over BMI bits
+echo "Applying BMI additions..."
 cp -r -f $BASE_DIR/src/* $WORK_DIR/
 cp -r -f $BASE_DIR/mockups/ $WORK_DIR/api_emulator/redfish/static/
 
@@ -145,6 +153,7 @@ venv/bin/pip install -q -r requirements.txt
 echo "Setting up credentials $AUTH"
 export AUTH_CONFIG=$AUTH
 export MOCKUPFOLDER=$MOCKUP
+export ASYNC_SLEEP=$ASYNC_SLEEP
 
 if [ "$SETUP_ONLY" == "true" ]; then
     echo ""

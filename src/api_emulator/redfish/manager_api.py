@@ -78,12 +78,12 @@ class ResetWorker(Thread):
         members[self.sys_id]['Status']['State'] = 'Disabled'
         # No events for managers
         # send_power_event(self.sys_id, 'Off')
-        sleep(5)
+        sleep(g.async_sleep)
         # members[self.sys_id]['PowerState'] = 'PoweringOn'
         members[self.sys_id]['Status']['State'] = 'Starting'
         # No events for managers
         # send_power_event(self.sys_id, 'On')
-        sleep(5)
+        sleep(g.async_sleep)
         # members[self.sys_id]['PowerState'] = 'On'
         members[self.sys_id]['Status']['State'] = 'Enabled'
 
@@ -102,7 +102,7 @@ class PowerOnWorker(Thread):
         members[self.sys_id]['Status']['State'] = 'Starting'
         # No events for managers
         # send_power_event(self.sys_id, 'On')
-        sleep(5)
+        sleep(g.async_sleep)
         # members[self.sys_id]['PowerState'] = 'On'
         members[self.sys_id]['Status']['State'] = 'Enabled'
 
