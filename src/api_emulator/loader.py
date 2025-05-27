@@ -260,8 +260,8 @@ class Loader:
             found_chassis = True
             id = member['@odata.id'].replace('/redfish/v1/Chassis/', '')
             config = self.resource_dictionary.get_resource('Chassis/' + id)
+            rst_actions = []
             if 'Actions' in config and '#Chassis.Reset' in config['Actions']:
-                rst_actions = []
                 if 'ResetType@Redfish.AllowableValues' in config['Actions']['#Chassis.Reset']:
                     rst_actions = config['Actions']['#Chassis.Reset']['ResetType@Redfish.AllowableValues']
                 else:
@@ -270,12 +270,12 @@ class Loader:
                         rst_actions = actionInfo['Parameters'][0]['AllowableValues']
                     except:
                         logging.info('Using default reset actions for Chassis/%s' % id)
-                InitChassis(id, config, rst_actions)
                 found_reset = True
+            InitChassis(id, config, rst_actions)
         if found_chassis:
             g.api.add_resource(ChassisAPI, '/redfish/v1/Chassis/<string:chassis_id>')
         if found_reset:
-            g.api.add_resource(ChassisResetActionAPI, '/redfish/v1/Chassis/<string:ident>/Actions/Chassis.Reset')
+            g.api.add_resource(ChassisResetActionAPI, '/redfish/v1/Chassis/<string:chassis_id>/Actions/Chassis.Reset')
 
     def init_manager_reset(self):
         try:

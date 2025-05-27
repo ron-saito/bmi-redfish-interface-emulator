@@ -138,13 +138,13 @@ class ChassisAPI(Resource):
         self.apiName = 'ChassisAPI'
 
     # HTTP GET
-    def get(self, ident):
+    def get(self, chassis_id):
         logging.info('%s %s called' % (self.apiName, request.method))
         try:
             # Find the entry with the correct value for Id
             resp = error_404_response(request.path)
-            if ident in members:
-                resp = members[ident], 200
+            if chassis_id in members:
+                resp = members[chassis_id], 200
         except Exception:
             traceback.print_exc()
             resp = simple_error_response('Server encountered an unexpected Error', 500)
@@ -163,12 +163,12 @@ class ChassisAPI(Resource):
         return resp
 
     # HTTP POST
-    def post(self, ident):
+    def post(self, chassis_id):
         logging.info('%s %s called' % (self.apiName, request.method))
         try:
             resp = error_404_response(request.path)
-            if ident in members:
-                resp = error_not_allowed_response(members[ident]['@odata.id'], request.method, {'Allow': self.allow})
+            if chassis_id in members:
+                resp = error_not_allowed_response(members[chassis_id]['@odata.id'], request.method, {'Allow': self.allow})
         except Exception:
             traceback.print_exc()
             resp = simple_error_response('Server encountered an unexpected Error', 500)
