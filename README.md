@@ -60,12 +60,12 @@ Set the mockup folder to the BMC type you want to emulate. The default is DL325.
 export MOCKUPFOLDER=DL325
 ```
 
-Run the docker image.
+### Run the docker image.
 ```
 docker run -p ${BMC_PORT}:443 -e MOCKUPFOLDER=<BMC_type> --rm bmi-simulator:latest
 ```
 
-To multiple instances of the emulator:
+### Run multiple instances of the emulator:
 ```
 docker-compose up --scale sim=<number of instances> -d 
 ```
@@ -78,6 +78,12 @@ docker-compose logs -f <container name>
 To stop the emulators:
 ```
 docker-compose down
+```
+
+To reset the assigned port in the range, restart the docker daemon:
+```
+(Ubuntu): sudo systemctl restart docker
+(MacOS using Colima): colima restart
 ```
 
 <a name="locally"></a>
