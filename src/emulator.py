@@ -167,6 +167,7 @@ def startup():
 #           parameter allows multiple mockup folders to co-exist, and the user
 #           can set this parameter to determine which mockups are actually
 #           loaded into the emulator.
+#   ASYNC_SLEEP = This parameter specifies the amount of time in seconds to sleep between.
 #
 # Passes control to startup()
 #
@@ -175,7 +176,7 @@ def main():
     global SPEC
 
     mockupfolder = os.getenv('MOCKUPFOLDER', 'public-rackmount1')
-    g.async_sleep = float(os.getenv('ASYNC_SLEEP', 5.0))
+    g.async_sleep = float(os.getenv('ASYNC_SLEEP', 0))
 
     HTTPS = os.getenv('HTTPS', 'Enable')
     assert HTTPS.lower() in ['enable', 'disable'], 'Unknown HTTPS setting:' + HTTPS
@@ -224,7 +225,8 @@ def main():
                                 'be ran locally.')
     args = argparser.parse_args()
 
-    logging.info('Mockup folder')
+    logging.info('Mockup folder: %s', args.mockupfolder)
+    logging.info('ASYNC_SLEEP: %ss', g.async_sleep)
     g.staticfolder = copy.copy(args.mockupfolder)
     print (g.staticfolder)
     startup()
