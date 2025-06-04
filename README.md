@@ -60,17 +60,31 @@ Set the mockup folder to the BMC type you want to emulate. The default is DL325.
 export MOCKUPFOLDER=DL325
 ```
 
-### Run the docker image.
+### To build the docker image:
+```
+docker build -t bmi-simulator:latest .
+```
+
+### Run the docker image:
 ```
 docker run -p ${BMC_PORT}:443 -e MOCKUPFOLDER=<BMC_type> --rm bmi-simulator:latest
 ```
 
 ### Run multiple instances of the emulator:
 ```
-docker-compose up --scale sim=<number of instances> -d 
+docker-compose up --scale <mockup>=<number of instances> -d 
+```
+#### For example, to run 3 instances of the DL325 emulator and 2 instances of the DL360 emulator:
+```
+docker-compose up --scale DL325=3 --scale DL360=2 -d
 ```
 
-To tail the logs:
+### To see the running containers with their assigned ports:
+```
+docker container ls
+```
+
+### To tail a container log:
 ```
 docker-compose logs -f <container name>
 ```
@@ -85,7 +99,6 @@ To reset the assigned port in the range, restart the docker daemon:
 (Ubuntu): sudo systemctl restart docker
 (MacOS using Colima): colima restart
 ```
-
 <a name="locally"></a>
 
 ### Locally
@@ -157,9 +170,9 @@ New BMC types can be added for emulation. This can be done by using a completely
 
 A static mockup is a directory tree that is an exact copy of the desired BMC type's redfish tree starting at the service base, /redfish/v1. Each directory has an index.json file that contains a copy of what is returned by a GET to that resource in the redfish tree. For example:
 ```
-EX235a:
+DL325:
 - Systems
--- Node0
+-- 1
 ...
 --- index.json
 -- index.json
@@ -168,18 +181,13 @@ EX235a:
 
 DMTF has a tool that can be run against a real BMC to walk the entire redfish tree and create a mockup, the [Redfish Mockup Creator](https://github.com/DMTF/Redfish-Mockup-Creator).
 
-The Redfish Mockup Creator can be run locally. For example, to create the EX325a mockup I used x9000c3s3b0 on loki by:
-
-- Opening a ssh tunnel to x9000c3s3b0
+The Redfish Mockup Creator can be run locally. For example, to create the DL360 mockup, run the Redfish Mockup Creator
 ```
-> ssh -L 7443:x3000c0s24b0:443 -N root@loki-ncn-m001.us.cray.com
+Redfish-Mockup-Creator> python ./redfishMockupCreator.py --u <username> --p <password> --A basic --r <server ip> -S -D ./DL325
 ```
 
-- In another window, run the Redfish Mockup Creator
-```
-Redfish-Mockup-Creator> python ./redfishMockupCreator.py --u <username> --p <password> --A basic --r localhost:7443 -S -D ./EX325a
-```
 **NOTE** Morpheus Bare Metal plugin hints:
+* If the password contains special characters, you may need to escape them.
 * The Redfish-Mockup-Creator needs to be run against a real BMC that is powered on so it captures the drives.
 * Remove Systems/1/Storage/Volumes/1
 * Clear the members entry in Systems/1/Storage/Volumes/index.json
@@ -188,7 +196,7 @@ Redfish-Mockup-Creator> python ./redfishMockupCreator.py --u <username> --p <pas
     * In Systems/1/index.json, the Model field needs to end with " - SIMULATED"
     * In index.json, the Product field needs to end with " - SIMULATED"
 
-**NOTE:** DMTF's Redfish Mockup Creator only follows "@odata.id", "Uri", or "Members@odata.nextLink" links to go deeper. Because of this "@Redfish.ActionInfo" URIs such as '/redfish/v1/Systems/Node0/ResetActionInfo' do not get automatically captured. To complete the mockup, they either need to be manually copied or you need to checkout the [Redfish Mockup Creator](https://github.com/DMTF/Redfish-Mockup-Creator) and add 'or item == "@Redfish.ActionInfo"' [here](https://github.com/DMTF/Redfish-Mockup-Creator/blob/master/redfishMockupCreate.py#L284) and [here](https://github.com/DMTF/Redfish-Mockup-Creator/blob/master/redfishMockupCreate.py#L338) before running it.
+**NOTE:** DMTF's Redfish Mockup Creator only follows "@odata.id", "Uri", or "Members@odata.nextLink" links to go deeper. Because of this "@Redfish.ActionInfo" URIs such as '/redfish/v1/Systems/1/ResetActionInfo' do not get automatically captured. To complete the mockup, they either need to be manually copied or you need to checkout the [Redfish Mockup Creator](https://github.com/DMTF/Redfish-Mockup-Creator) and add 'or item == "@Redfish.ActionInfo"' [here](https://github.com/DMTF/Redfish-Mockup-Creator/blob/master/redfishMockupCreate.py#L284) and [here](https://github.com/DMTF/Redfish-Mockup-Creator/blob/master/redfishMockupCreate.py#L338) before running it.
 
 The static resource tree for a BMC type needs to be placed in csm-redfish-interface-emulator/mockups/<BMC_type> such that the index.json file in ./<BMC_type> is for the resource base, /redfish/v1.
 
@@ -409,17 +417,9 @@ Some dynamic resources such as the EventService generate responses (i.e. Redfish
 <a name="existing-static-mockups"></a>
 
 ## Existing static mockup files:
-- Generic [public-rackmount1](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/public-rackmount1)
-- [CMM](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/CMM) (Mountain Chassis BMC)
 - [DL325](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/DL325) (ProLiant DL325 Gen10 Plus)
-- [EX235a](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/EX235a) (Bard Peak)
-- [EX235n](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/EX235n) (Grizzly Peak)
-- [EX420](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/EX420) (Castle)
-- [EX425](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/EX425) (Windom)
-- [Gigabyte](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/Gigabyte) (Gigabyte Compute)
-- [Intel](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/Intel) (Intel Compute)
-- [Slingshot_Switch_Blade](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/Slingshot_Switch_Blade) (Slingshot Router Module)
-- [XL675d_A40](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/XL675d_A40) (Apollo 6500 A40)
+- [DL360](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/DL360) (ProLiant DL360 Gen10 Plus)
+- [EX235a](https://github.com/Cray-HPE/csm-redfish-interface-emulator/tree/master/mockups/EX235a) (Bard Peak - is not used my Morpheus Bare Metal plugin, but is kept for reference)
 
 <a name="existing-dynamic-resources"></a>
 
